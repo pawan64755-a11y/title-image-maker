@@ -452,7 +452,7 @@ function applyTheme(idx){
   r.setProperty('--mut',css(mix(ink,base,.4)));
   r.setProperty('--line',css(mix(base,ink,.22)));
   r.setProperty('--acc',css(acc));
-  r.setProperty('--onacc',lum(acc)>.6?'#1b1b1f':'#ffffff');
+  r.setProperty('--onacc',(.299*acc[0]+.587*acc[1]+.114*acc[2])/255>.6?'#1b1b1f':'#ffffff');
   document.documentElement.style.colorScheme=dk?'dark':'light';
 }
 

@@ -41,6 +41,7 @@ button:focus-visible,textarea:focus-visible,select:focus-visible,input:focus-vis
   <div class="card">
     <label for="title">Blog post title</label>
     <textarea id="title" placeholder="Paste your blog post title here"></textarea>
+    <p class="sub" style="margin-top:6px">Tip: put *stars* around a word to make it big and highlighted, e.g. 10 *Signs* He Is Losing Interest</p>
     <div class="row" style="margin-top:10px">
       <div><label for="ratio">Image size</label>
         <select id="ratio"><option value="4:5">4:5 (1600x2000) Facebook + Pinterest</option><option value="2:3">2:3 (1600x2400) Pinterest first</option></select></div>
@@ -70,6 +71,12 @@ button:focus-visible,textarea:focus-visible,select:focus-visible,input:focus-vis
       <div><label for="blogfmt">Blog image format</label>
         <select id="blogfmt"><option value="jpg">JPG</option><option value="webp">WebP (smaller)</option><option value="png">PNG</option></select></div>
     </div>
+    <div class="row" style="margin-top:10px">
+      <div><label for="layout">Layout</label>
+        <select id="layout"><option value="smart">Smart mix (different word sizes)</option><option value="same">Same size</option></select></div>
+      <div><label>&nbsp;</label><button id="shuf" type="button" style="width:100%;padding:10px">Shuffle layout</button></div>
+    </div>
+    <label class="chk"><input type="checkbox" id="accent" checked> Accent colour highlight on key words</label>
     <label class="chk"><input type="checkbox" id="auto" checked> Auto-fit text size</label>
     <label class="chk"><input type="checkbox" id="adv" checked> Switch to the next background after download</label>
   </div>
@@ -108,54 +115,259 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 function next(){S.pos++;if(S.pos>=N){const last=S.order[N-1];S.order=shuffle();if(S.order[0]===last){[S.order[0],S.order[1]]=[S.order[1],S.order[0]]}S.pos=0;S.round++}save()}
 function prev(){if(S.pos>0){S.pos--;save()}}
 
-/* ---------- clean backgrounds ---------- */
+/* ---------- seeded random ---------- */
 function mb(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
-/* [bg start, bg end, accent, text color] */
-const LIGHT=[['#ffffff','#f5f6f8','#2f5bea','#111827'],['#faf7f2','#f3ede3','#c2703d','#2b2118'],['#f4f6f8','#e9edf2','#5b6b82','#101828'],['#f1f7fd','#e3eff9','#3b82c4','#0f2238'],['#f2f9f4','#e2f1e7','#3f9b6b','#10281b'],['#fdf3f4','#f9e4e7','#d6566f','#2b0f16'],['#fbf6e9','#f6ecd0','#c99a1e','#2a2208'],['#f6f3fb','#ebe5f6','#7c5cc4','#1c1233'],['#fff5ee','#ffe8d9','#e8773a','#2d1608'],['#f0f8f7','#dff0ee','#2a9d8f','#0c2523'],['#f7f7f2','#eeeee4','#8a8f3a','#1f210c'],['#fafafa','#f0f0f0','#e03a3a','#141414']];
-const DARK=[['#111827','#1b2437','#60a5fa','#ffffff'],['#1c1c1e','#2a2a2e','#f5b942','#ffffff'],['#0f2a20','#173b2e','#58c28a','#ffffff'],['#3a1018','#4d1a25','#f28a9b','#ffffff'],['#1e1b3a','#2c2750','#a78bfa','#ffffff'],['#0f2f33','#174247','#5eead4','#ffffff']];
+
+/* ---------- color helpers ---------- */
+const hex2rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+const rgba=(c,a)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
+const mix=(c1,c2,t)=>c1.map((v,i)=>Math.round(v+(c2[i]-v)*t));
+function rr(x,y,w,h,rad){ctx.beginPath();ctx.moveTo(x+rad,y);ctx.arcTo(x+w,y,x+w,y+h,rad);ctx.arcTo(x+w,y+h,x,y+h,rad);ctx.arcTo(x,y+h,x,y,rad);ctx.arcTo(x,y,x+w,y,rad);ctx.closePath()}
+function glow(cx,cy,rad,color){ctx.save();const b=Math.max(8,Math.min(130,rad*.32));try{ctx.filter=`blur(${Math.round(b)}px)`}catch(e){}ctx.fillStyle=color;ctx.beginPath();ctx.arc(cx,cy,rad,0,6.283);ctx.fill();ctx.restore()}
+function heartPath(hx,hy,hs){const t=hs*.3;ctx.beginPath();ctx.moveTo(hx,hy+t);
+  ctx.bezierCurveTo(hx,hy,hx-hs/2,hy,hx-hs/2,hy+t);
+  ctx.bezierCurveTo(hx-hs/2,hy+(hs+t)/2,hx,hy+(hs+t)/2,hx,hy+hs);
+  ctx.bezierCurveTo(hx,hy+(hs+t)/2,hx+hs/2,hy+(hs+t)/2,hx+hs/2,hy+t);
+  ctx.bezierCurveTo(hx+hs/2,hy,hx,hy,hx,hy+t);
+  ctx.closePath()}
+let _noise=null;
+function noiseTile(){
+  if(_noise)return _noise;
+  const n=96,c=document.createElement('canvas');c.width=n;c.height=n;
+  const x=c.getContext('2d'),id=x.createImageData(n,n);
+  for(let i=0;i<id.data.length;i+=4){const v=128+(Math.random()-.5)*130;id.data[i]=id.data[i+1]=id.data[i+2]=v;id.data[i+3]=255}
+  x.putImageData(id,0,0);_noise=c;return c;
+}
+
+/* ---------- curated palettes, tuned for relationship / dating-psychology content: [bgFrom, bgTo, accent, accent2, textColor] ---------- */
+const LIGHT=[
+['#fff1f4','#fbdee6','#d6566f','#ffb0c0','#2b0f16'],
+['#fdf2f4','#f3dde2','#b85c70','#e8a6b4','#2a1014'],
+['#fff7f0','#ffe3cf','#e8773a','#ffbf8f','#2d1608'],
+['#fff4f1','#ffdfd6','#ec6a52','#ffab93','#2b140d'],
+['#faf3f1','#eeddd9','#b8705f','#e3b3a6','#281411'],
+['#f8f4ff','#ebe0fb','#8a5cc9','#cda8f5','#271a3d'],
+['#fdf6fb','#f0dcee','#b3539e','#edaedb','#2a0f24'],
+['#fff9f2','#f6e6d6','#c99a6b','#e8c79a','#2a2008'],
+['#fff3f4','#f6dadf','#a63d52','#e3909f','#280d12'],
+['#fdfaf6','#f1e6dc','#c2703d','#e3a97c','#2b2118']
+];
+const DARK=[
+['#2c0f17','#43151f','#f28a9b','#ffbac4','#ffffff'],
+['#1e1534','#2d2050','#b28bfa','#d9c4ff','#ffffff'],
+['#1f0f14','#331620','#e0607a','#ffa3b5','#ffffff'],
+['#201a18','#302722','#e3a16a','#f0c89a','#ffffff'],
+['#241a14','#3a241c','#e8a15c','#f2c28f','#ffffff'],
+['#201218','#331c26','#d98fa0','#f0bcc7','#ffffff']
+];
+
+/* ---------- background: curated gradient + soft shapes + grain + vignette ---------- */
 function drawBg(idx){
-  const r=mb(idx*7919+12345),type=idx%9,dk=r()<.3,L=dk?DARK:LIGHT,p=L[r()*L.length|0];
-  const rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),col=(c,al)=>`rgba(${c[0]},${c[1]},${c[2]},${al})`;
-  const a=rgb(p[0]),b=rgb(p[1]),ac=rgb(p[2]);
-  ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;
-  const ang=Math.PI/2+(r()-.5)*1.4,l=Math.hypot(W,H)/2,x=Math.cos(ang)*l,y=Math.sin(ang)*l,g=ctx.createLinearGradient(W/2-x,H/2-y,W/2+x,H/2+y);
-  g.addColorStop(0,col(a,1));g.addColorStop(1,col(b,1));ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-  const fl=r()<.5,top=r()<.5;ctx.fillStyle=col(ac,.9);ctx.strokeStyle=col(ac,.6);ctx.lineWidth=4;ctx.lineCap='round';
-  if(type===1){const t=14+r()*14;ctx.fillRect(0,fl?0:H-t,W,t)}
-  else if(type===2){const t=16+r()*14;ctx.fillRect(fl?0:W-t,0,t,H)}
-  else if(type===3){const m=50+r()*30;ctx.strokeRect(m,m,W-2*m,H-2*m)}
-  else if(type===4){ctx.fillStyle=col(ac,.14);ctx.beginPath();ctx.arc(fl?0:W,top?0:H,Math.min(W,H)*(.2+r()*.1),0,6.283);ctx.fill()}
-  else if(type===5){ctx.fillStyle=col(ac,.12);const R=Math.min(W,H)*(.18+r()*.08);ctx.beginPath();ctx.arc(fl?0:W,0,R,0,6.283);ctx.fill();ctx.beginPath();ctx.arc(fl?W:0,H,R,0,6.283);ctx.fill()}
-  else if(type===6){ctx.beginPath();ctx.moveTo(140,110);ctx.lineTo(W-140,110);ctx.moveTo(140,H-110);ctx.lineTo(W-140,H-110);ctx.stroke()}
-  else if(type===7){const w=W*(.05+r()*.03);ctx.fillStyle=col(ac,.12);ctx.fillRect(fl?0:W-w,0,w,H)}
-  else if(type===8){ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(90,210);ctx.lineTo(90,90);ctx.lineTo(210,90);ctx.moveTo(W-90,H-210);ctx.lineTo(W-90,H-90);ctx.lineTo(W-210,H-90);ctx.stroke()}
-  return p[3];
+  const sc=Math.min(W,H)/1600;
+  const r=mb(idx*7919+12345);
+  const dk=r()<.38,PAL=dk?DARK:LIGHT,p=PAL[r()*PAL.length|0];
+  const rgbA=hex2rgb(p[0]),rgbB=hex2rgb(p[1]),rgbAcc=hex2rgb(p[2]),rgbAcc2=hex2rgb(p[3]),ink=p[4];
+
+  ctx.save();
+  ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;try{ctx.filter='none'}catch(e){}
+
+  /* multi-stop gradient with a gentle hue drift through the middle */
+  const ang=Math.PI/2+(r()-.5)*1.3,l=Math.hypot(W,H)/2,gx=Math.cos(ang)*l,gy=Math.sin(ang)*l;
+  const g=ctx.createLinearGradient(W/2-gx,H/2-gy,W/2+gx,H/2+gy);
+  let mid=mix(rgbA,rgbB,.52);mid=mix(mid,rgbAcc,.1+r()*.08);
+  g.addColorStop(0,rgba(rgbA,1));g.addColorStop(.5,rgba(mid,1));g.addColorStop(1,rgba(rgbB,1));
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+
+  const fl=r()<.5,top=r()<.5,type=idx%14;
+  switch(type){
+    case 0:{const R1=(260+r()*140)*sc,R2=(220+r()*120)*sc;
+      glow(fl?W*.08:W*.92,top?H*.1:H*.9,R1,rgba(rgbAcc,.5));
+      glow(fl?W*.92:W*.08,top?H*.85:H*.15,R2,rgba(rgbAcc2,.4));break}
+    case 1:{const R=(360+r()*160)*sc;glow(fl?W*.78:W*.22,top?H*.22:H*.78,R,rgba(rgbAcc,.42));break}
+    case 2:{const t=(260+r()*120)*sc,y=top?0:H-t,b=ctx.createLinearGradient(0,top?t:H-t,0,top?0:H);
+      b.addColorStop(0,'rgba(0,0,0,0)');b.addColorStop(1,rgba(rgbAcc,.28));
+      ctx.fillStyle=b;ctx.fillRect(0,y,W,t);break}
+    case 3:{const w=(220+r()*120)*sc,x=fl?0:W-w,b=ctx.createLinearGradient(fl?0:W,0,fl?w:W-w,0);
+      b.addColorStop(0,rgba(rgbAcc,.26));b.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=b;ctx.fillRect(x,0,w,H);break}
+    case 4:{const gap=46*sc,R=3*sc,x0=fl?W*.07:W*.72,y0=top?H*.07:H*.8;
+      ctx.fillStyle=rgba(rgbAcc,.4);
+      for(let i=0;i<6;i++)for(let j=0;j<6;j++){ctx.beginPath();ctx.arc(x0+i*gap,y0+j*gap,R,0,6.283);ctx.fill()}break}
+    case 5:{const m=(70+r()*20)*sc;ctx.strokeStyle=rgba(rgbAcc,.55);ctx.lineWidth=3*sc;rr(m,m,W-2*m,H-2*m,24*sc);ctx.stroke();break}
+    case 6:{const s=(300+r()*80)*sc,X=fl?0:W,Y=top?0:H,sx=fl?s:-s,sy=top?s:-s;
+      ctx.beginPath();ctx.moveTo(X,Y);ctx.lineTo(X+sx,Y);ctx.lineTo(X,Y+sy);ctx.closePath();
+      ctx.fillStyle=rgba(rgbAcc2,.5);ctx.fill();break}
+    case 7:{const amp=(40+r()*20)*sc,off=(120+r()*40)*sc;ctx.beginPath();
+      if(top){ctx.moveTo(0,off);ctx.bezierCurveTo(W*.25,off-amp,W*.75,off+amp,W,off);ctx.lineTo(W,0);ctx.lineTo(0,0)}
+      else{const base=H-off;ctx.moveTo(0,base);ctx.bezierCurveTo(W*.25,base-amp,W*.75,base+amp,W,base);ctx.lineTo(W,H);ctx.lineTo(0,H)}
+      ctx.closePath();ctx.fillStyle=rgba(rgbAcc,.3);ctx.fill();break}
+    case 8:{const ccx=fl?W*.1:W*.9,ccy=top?H*.15:H*.85;ctx.strokeStyle=rgba(rgbAcc,.4);ctx.lineWidth=2.5*sc;
+      [1,1.6,2.2].forEach(m=>{ctx.beginPath();ctx.arc(ccx,ccy,70*sc*m,0,6.283);ctx.stroke()});break}
+    case 9:{const m=90*sc,len=110*sc;ctx.strokeStyle=rgba(rgbAcc,.55);ctx.lineWidth=3.5*sc;ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(m,m+len);ctx.lineTo(m,m);ctx.lineTo(m+len,m);
+      ctx.moveTo(W-m,H-m-len);ctx.lineTo(W-m,H-m);ctx.lineTo(W-m-len,H-m);ctx.stroke();
+      ctx.fillStyle=rgba(rgbAcc2,.8);ctx.beginPath();ctx.arc(m,m,5*sc,0,6.283);ctx.fill();ctx.beginPath();ctx.arc(W-m,H-m,5*sc,0,6.283);ctx.fill();break}
+    case 10:{glow(W/2,H*.42,(520+r()*80)*sc,rgba(rgbAcc,.16));break}
+    case 11:{const g2=ctx.createLinearGradient(fl?0:W,0,fl?W:0,H);
+      g2.addColorStop(.42,'rgba(0,0,0,0)');g2.addColorStop(1,rgba(rgbAcc,.22));
+      ctx.fillStyle=g2;ctx.fillRect(0,0,W,H);break}
+    case 12:{const n=10+(r()*6|0);
+      for(let i=0;i<n;i++){const edge=r()<.5,x=edge?(r()*W*.2+(fl?0:W*.8)):r()*W,y=edge?r()*H:(r()*H*.18+(top?0:H*.82)),rad=(4+r()*10)*sc;
+        ctx.fillStyle=rgba(r()<.5?rgbAcc:rgbAcc2,.35+r()*.25);ctx.beginPath();ctx.arc(x,y,rad,0,6.283);ctx.fill()}break}
+    case 13:{const m=90*sc;ctx.strokeStyle=rgba(rgbAcc,.45);ctx.lineWidth=2*sc;
+      ctx.beginPath();ctx.moveTo(m,m);ctx.lineTo(W-m,m);ctx.moveTo(m,H-m);ctx.lineTo(W-m,H-m);ctx.stroke();
+      ctx.fillStyle=rgba(rgbAcc2,.8);ctx.beginPath();ctx.arc(m,m,4*sc,0,6.283);ctx.fill();ctx.beginPath();ctx.arc(W-m,H-m,4*sc,0,6.283);ctx.fill();break}
+  }
+
+  /* fine grain for a premium, non-flat finish */
+  ctx.save();ctx.globalAlpha=.05;ctx.globalCompositeOperation='overlay';
+  try{ctx.fillStyle=ctx.createPattern(noiseTile(),'repeat');ctx.fillRect(0,0,W,H)}catch(e){}
+  ctx.restore();
+
+  /* soft vignette for depth */
+  const vig=ctx.createRadialGradient(W/2,H*.46,Math.min(W,H)*.15,W/2,H*.5,Math.max(W,H)*.75);
+  vig.addColorStop(0,'rgba(0,0,0,0)');vig.addColorStop(1,dk?'rgba(0,0,0,.34)':'rgba(0,0,0,.14)');
+  ctx.fillStyle=vig;ctx.fillRect(0,0,W,H);
+
+  ctx.restore();
+  /* accent colour for highlighted words: darkened on light backgrounds so it stays readable */
+  const accTxt=dk?mix(rgbAcc,[255,255,255],.12):mix(rgbAcc,hex2rgb(ink),.35);
+  return {color:ink,dark:dk,accent:rgba(rgbAcc,1),accentText:rgba(accTxt,1)};
 }
 
 /* ---------- text ---------- */
 const FALL={'Poppins':'"Poppins"','Montserrat':'"Montserrat"','Playfair Display':'"Playfair Display"','Oswald':'"Oswald"'};
 function family(){return (FALL[$('font').value]||'"Poppins"')+',"Segoe UI",Arial,sans-serif'}
-function wrap(text,maxW){const out=[];
-  text.split(/\n/).forEach(p=>{const words=p.trim().split(/\s+/).filter(Boolean);let line='';
-    words.forEach(w=>{const t=line?line+' '+w:w;if(ctx.measureText(t).width>maxW&&line){out.push(line);line=w}else line=t});
-    if(line)out.push(line)});return out}
-function getText(){let t=$('title').value.trim();const tc=$('case').value;
-  if(tc==='upper')t=t.toUpperCase();else if(tc==='title')t=t.replace(/(^|[\s\-:(])([a-z])/g,(m,a,b)=>a+b.toUpperCase());return t}
+/* raw title as typed (may contain *star* markers); '' if there is nothing to draw */
+function getText(){const t=$('title').value.trim();return t.replace(/\*/g,'').trim()?t:''}
+function hs(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+
+/* ---------- smart mix: word importance ---------- */
+let layoutV=0; /* 0 = default arrangement, >0 = "Shuffle layout" variants */
+const SMALL=new Set('a an the of in on to for and or but nor is are was were be been am it its he she him her his hers they them their you your yours my me we us our i this that these those with at by from as if so do does did not no how why what when who whom which will can could would should may might has have had than then vs via into onto over about'.split(' '));
+const POWER=new Set('sign signs secret secrets love loves loved never always ghost ghosting ghosted toxic truth flag flags crush breakup heart trust attachment narcissist miss misses missing loyal jealous obsessed mistake mistakes rules reasons ways things texting ignore ignoring lying cheating cheat interest losing relationship dating attract attraction psychology tricks hidden real true truly lonely forget ex boyfriend girlfriend husband wife men man women woman'.split(' '));
+function applyCase(w,tc){if(tc==='upper')return w.toUpperCase();if(tc==='title')return w.replace(/(^|[\-:(])([a-z])/g,(m,a,b)=>a+b.toUpperCase());return w}
+
+/* turns the title into word objects: {t text, wt size weight, acc highlight, br forced line break} */
+function buildWords(text,smart,accOn,variant){
+  const tc=$('case').value,words=[];
+  text.split(/\n/).forEach((p,pi)=>{
+    let first=true;
+    (p.match(/\*[^*]+\*\S*|\S+/g)||[]).forEach(tok=>{
+      let star=false,seg=tok;const m=tok.match(/^\*([^*]+)\*(\S*)$/);
+      if(m){star=true;seg=m[1]+m[2]}
+      seg.replace(/\*/g,'').split(/\s+/).filter(Boolean).forEach(w=>{
+        words.push({raw:w,star:star,br:pi>0&&first});first=false});
+    });
+  });
+  const r=mb((hs(text)+variant*7919)|0);
+  words.forEach(w=>{
+    const key=w.raw.toLowerCase().replace(/[^a-z']/g,'').replace(/'s$/,'');
+    w.t=applyCase(w.raw,tc);w.key=key;w.wt=1;w.acc=false;w.small=false;
+    if(!smart)return;
+    if(w.star)w.wt=1.6;
+    else if(/\d/.test(w.raw)){w.num=true;w.wt=variant?1.4+r()*.35:1.6}
+    else if(POWER.has(key)){w.pow=true;w.wt=variant?1.25+r()*.4:1.45}
+    else if(SMALL.has(key)){w.small=true;w.wt=variant?.5+r()*.15:.58}
+    else if(variant)w.wt=.85+r()*.4;
+  });
+  if(smart&&accOn&&words.length){
+    const pick=w=>{w.acc=true};
+    const stars=words.filter(w=>w.star);
+    if(stars.length)stars.forEach(pick);
+    else{
+      const cands=words.filter(w=>!w.small);
+      if(!variant){
+        const n=words.find(w=>w.num),p=words.find(w=>w.pow);
+        if(n)pick(n);if(p)pick(p);
+        if(!n&&!p&&cands.length)pick(cands.reduce((a,b)=>b.key.length>a.key.length?b:a));
+      }else if(cands.length){
+        const a=cands[r()*cands.length|0];pick(a);
+        if(cands.length>2&&r()<.5)pick(cands[r()*cands.length|0]);
+      }
+    }
+  }
+  return words;
+}
+
+/* ---------- smart mix: line breaking (balanced) + per-line fit ---------- */
+function layoutWords(words,base,o){
+  const n=words.length;if(!n)return{lines:[],T:0};
+  const SP=.27,limW=o.maxW*o.t;
+  const ww=words.map(w=>w.w100*w.wt*base/100);
+  const sp=k=>SP*base*(words[k].wt+words[k+1].wt)/2;
+  const best=new Array(n+1).fill(Infinity),from=new Array(n+1).fill(0);best[0]=0;
+  for(let i=1;i<=n;i++){let w=0;
+    for(let j=i-1;j>=0;j--){
+      if(j+1<=i-1&&words[j+1].br)break;
+      w+=ww[j]+(j<i-1?sp(j):0);
+      if(j<i-1&&w>limW)break;
+      const slack=Math.max(0,(limW-w)/limW);
+      let c=best[j]+slack*slack*(i===n?.4:1);
+      if(w>o.maxW)c+=((w-o.maxW)/o.maxW)*2;
+      if(c<best[i]){best[i]=c;from[i]=j}
+    }}
+  const ranges=[];for(let i=n;i>0;i=from[i])ranges.unshift([from[i],i]);
+  let T=0;const lines=ranges.map(([j,i])=>{
+    let w=0,maxWt=0;
+    for(let k=j;k<i;k++){w+=ww[k]+(k<i-1?sp(k):0);maxWt=Math.max(maxWt,words[k].wt)}
+    const capUp=o.capUp>1&&maxWt<.8?1.1:o.capUp;
+    let f=Math.min(capUp,o.maxW/w);
+    f=Math.min(f,o.maxSz/(maxWt*base));
+    const items=[];let x=0;
+    for(let k=j;k<i;k++){items.push({t:words[k].t,sz:base*words[k].wt*f,acc:words[k].acc,x:x});x+=ww[k]*f+(k<i-1?sp(k)*f:0)}
+    const msz=maxWt*base*f,lh=msz*1.12;T+=lh;
+    return{items:items,lw:w*f,lh:lh,msz:msz};
+  });
+  return{lines:lines,T:T};
+}
 
 /* draws background + title on the current ctx/W/H (works for any size) */
 function paint(idx,text){
   const sc=Math.min(W,H)/1600,land=W>H,al=$('align').value,auto=$('auto').checked;
   const maxW=land?W*.78:1240,maxH=land?H*.62:1400,x0=land?W*.11:180;
-  const fg=drawBg(idx);
-  let size=auto?Math.round(Math.min(W,H)*.162):Math.round(+$('size').value*sc),lines=[],lh;
-  for(;;){ctx.font=`700 ${size}px ${family()}`;lines=wrap(text,maxW);lh=size*1.3;
-    if(!auto||lines.length*lh<=maxH||size<=36*sc)break;size-=Math.max(2,Math.round(4*sc))}
-  ctx.fillStyle=fg;ctx.textBaseline='middle';ctx.textAlign=al;
-  const x=al==='center'?W/2:x0,total=lines.length*lh,y0=(H-total)/2+lh/2-size*.1;
-  lines.forEach((l,i)=>ctx.fillText(l,x,y0+i*lh));
-  if(text){const bw=150*sc,by=Math.min(y0+total-lh/2+size*.55,H-150*sc);ctx.globalAlpha=.85;ctx.fillRect(al==='center'?W/2-bw/2:x0,by,bw,8*sc);ctx.globalAlpha=1}
+  const bg=drawBg(idx),fg=bg.color;
+  const smart=$('layout').value==='smart',accOn=$('accent').checked&&smart,m=Math.min(W,H);
+  const words=buildWords(text,smart,accOn,layoutV);
+  ctx.font=`700 100px ${family()}`;words.forEach(w=>{w.w100=ctx.measureText(w.t).width});
+  const rt=mb((hs(text)^(layoutV*40503))|0),o={maxW:maxW,maxSz:m*.3,t:smart&&layoutV?.78+rt()*.22:1,capUp:smart&&auto?1.5:1};
+  let size,lay;
+  if(auto){
+    size=smart?m*.15:m*.162;const minB=Math.max(36*sc,m*.03);
+    for(;;){lay=layoutWords(words,size,o);if(lay.T<=maxH||size<=minB)break;size=Math.max(minB,size*.96)}
+  }else{size=Math.round(+$('size').value*sc);lay=layoutWords(words,size,o)}
+  size=Math.round(size);
+  const top0=(H-lay.T)/2-10*sc,total=lay.T;
+
+  /* soft spotlight behind the text block so it pops regardless of what's under it */
+  if(text){
+    ctx.save();
+    const spot=ctx.createRadialGradient(W/2,H/2,10*sc,W/2,H/2,Math.min(W,H)*.52);
+    spot.addColorStop(0,bg.dark?'rgba(0,0,0,.4)':'rgba(255,255,255,.6)');
+    spot.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=spot;ctx.fillRect(0,0,W,H);
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.textBaseline='alphabetic';ctx.textAlign='left';
+  ctx.shadowColor='rgba(0,0,0,.3)';ctx.shadowBlur=16*sc;ctx.shadowOffsetY=5*sc;
+  let ly=top0;
+  lay.lines.forEach(L=>{
+    const sx=al==='center'?W/2-L.lw/2:x0,by=ly+L.lh/2+L.msz*.35;
+    L.items.forEach(it=>{ctx.font=`700 ${it.sz.toFixed(1)}px ${family()}`;ctx.fillStyle=it.acc?bg.accentText:fg;ctx.fillText(it.t,sx+it.x,by)});
+    ly+=L.lh});
+  ctx.restore();
+
+  if(text){
+    const bw=140*sc,bh=8*sc,by=Math.min(top0+total+24*sc,H-150*sc),bx=al==='center'?W/2-bw/2:x0;
+    ctx.save();ctx.shadowColor='rgba(0,0,0,.25)';ctx.shadowBlur=10*sc;ctx.shadowOffsetY=3*sc;
+    ctx.fillStyle=bg.accent;rr(bx,by,bw,bh,bh/2);ctx.fill();ctx.restore();
+  }
+
   const site=$('site').value.trim();
-  if(site){ctx.font=`700 ${Math.round(36*sc)}px ${family()}`;ctx.globalAlpha=.8;ctx.textAlign='center';ctx.fillText(site,W/2,H-70*sc);ctx.globalAlpha=1}
+  if(site){ctx.save();ctx.font=`700 ${Math.round(36*sc)}px ${family()}`;ctx.globalAlpha=.85;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.shadowColor='rgba(0,0,0,.3)';ctx.shadowBlur=8*sc;ctx.fillStyle=fg;ctx.fillText(site,W/2,H-70*sc);ctx.restore()}
   return size;
 }
 
@@ -166,6 +378,7 @@ async function render(){
   if(my!==token)return;
   const size=paint(idx,text);
   $('dlp').disabled=$('dlj').disabled=!text;
+  $('shuf').disabled=$('layout').value!=='smart';
   $('sizeV').textContent=$('auto').checked?'Auto ('+size+')':$('size').value;
   $('counter').textContent=`${S.pos+1} / ${N} · Round ${S.round}`;$('bgid').textContent='BG #'+(idx+1);
 }
@@ -203,7 +416,9 @@ function note(){const k=$('blogsize').value;$('note').textContent=BLOG[k]?`Each 
 /* ---------- events ---------- */
 let tm;const deb=()=>{clearTimeout(tm);tm=setTimeout(render,200)};
 ['title','site'].forEach(i=>$(i).addEventListener('input',deb));
-['font','align','auto','case'].forEach(i=>$(i).addEventListener('change',render));
+$('title').addEventListener('input',()=>{layoutV=0});
+['font','align','auto','case','layout','accent'].forEach(i=>$(i).addEventListener('change',render));
+$('shuf').onclick=()=>{layoutV++;render()};
 $('size').addEventListener('input',()=>{$('auto').checked=false;deb()});
 $('blogsize').addEventListener('change',note);
 $('ratio').addEventListener('change',()=>{rv=$('ratio').value;note();try{localStorage.setItem(RK,rv)}catch(e){}setRatio(rv);render()});

@@ -10,7 +10,7 @@
 :root{--bg:#f3f4f7;--card:#fff;--ink:#1b1e27;--mut:#667085;--line:#d9dde5;--acc:#2f5bea}
 @media (prefers-color-scheme:dark){:root{--bg:#14161c;--card:#1d2029;--ink:#eef0f5;--mut:#9aa3b5;--line:#313644;--acc:#6d8cff}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,Arial,sans-serif;padding:14px}
+body{margin:0;min-height:100vh;background:var(--bg);background-image:var(--bgimg,none);background-attachment:fixed;color:var(--ink);transition:color .5s;font-family:"Segoe UI",system-ui,Arial,sans-serif;padding:14px}
 .wrap{max-width:760px;margin:0 auto;display:grid;gap:12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
 h1{font-size:20px;margin:0 0 2px}
@@ -23,7 +23,9 @@ label{font-size:14px;color:var(--mut);display:block;margin-bottom:4px}
 canvas{width:100%;height:auto;display:block}
 .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 button{font:inherit;font-weight:600;padding:12px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
-button.p{background:var(--acc);border-color:var(--acc);color:#fff}
+button.p{background:var(--acc);border-color:var(--acc);color:var(--onacc,#fff)}
+select option{background:var(--card);color:var(--ink)}
+.card{transition:background .5s,border-color .5s}
 button:disabled{opacity:.45;cursor:not-allowed}
 button:focus-visible,textarea:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
 .info{display:flex;justify-content:space-between;font-size:14px;color:var(--mut);margin:0 0 8px}
@@ -74,7 +76,7 @@ button:focus-visible,textarea:focus-visible,select:focus-visible,input:focus-vis
       <select id="mstyle"><option value="text">Text colour</option><option value="marker">Marker highlight</option></select></div>
     <label class="chk"><input type="checkbox" id="fill" checked> Fill each line (lines with fewer words get bigger text)</label>
     <label class="chk"><input type="checkbox" id="auto" checked> Auto-fit text size</label>
-    <label class="chk"><input type="checkbox" id="adv" checked> Switch to the next background after download</label>
+    <label class="chk"><input type="checkbox" id="adv" checked> Change design + background after every save</label>
   </div>
 
   <div class="card">
@@ -437,9 +439,27 @@ function paint(idx,text){
   return size;
 }
 
+/* ---------- page design follows the current background (changes after every save) ---------- */
+const css=c=>`rgb(${c[0]},${c[1]},${c[2]})`;
+function applyTheme(idx){
+  const rc=recipe(idx),p=ALL[rc.pal],dk=rc.pal>=LIGHT.length,r=document.documentElement.style;
+  const b0=hex2rgb(p[0]),b1=hex2rgb(p[1]),acc=hex2rgb(p[2]),ink=dk?[255,255,255]:hex2rgb(p[4]);
+  const card=dk?mix(b1,[255,255,255],.07):mix([255,255,255],b0,.3),base=dk?b0:b1;
+  r.setProperty('--bg',css(b0));
+  r.setProperty('--bgimg',`linear-gradient(145deg,${css(b0)},${css(b1)})`);
+  r.setProperty('--card',css(card));
+  r.setProperty('--ink',css(ink));
+  r.setProperty('--mut',css(mix(ink,base,.4)));
+  r.setProperty('--line',css(mix(base,ink,.22)));
+  r.setProperty('--acc',css(acc));
+  r.setProperty('--onacc',lum(acc)>.6?'#1b1b1f':'#ffffff');
+  document.documentElement.style.colorScheme=dk?'dark':'light';
+}
+
 let token=0;
 async function render(){
   const my=++token,idx=S.order[S.pos],text=getText();
+  applyTheme(idx);
   try{await document.fonts.load('700 60px '+family(),text||'A')}catch(e){}
   if(my!==token)return;
   const size=paint(idx,text);
@@ -499,7 +519,7 @@ $('reset').onclick=()=>{if(confirm('Reset the shuffle? All 1200 backgrounds will
 if(NATIVE){$('dlp').textContent='Share / Save PNG';$('dlj').textContent='Share / Save JPG'}
 
 /* ---------- remember settings (font, style, size, blog image, site name...) ---------- */
-const SETK='titleimg_settings_v1',SETIDS=['font','case','align','size','auto','fill','site','blogsize','blogfmt','adv','mstyle'];
+const SETK='titleimg_settings_v2',SETIDS=['font','case','align','size','auto','fill','site','blogsize','blogfmt','adv','mstyle'];
 function saveSet(){try{const o={};SETIDS.forEach(i=>{const e=$(i);o[i]=e.type==='checkbox'?e.checked:e.value});localStorage.setItem(SETK,JSON.stringify(o))}catch(e){}}
 function loadSet(){try{const o=JSON.parse(localStorage.getItem(SETK));if(!o)return;
   SETIDS.forEach(i=>{if(!(i in o))return;const e=$(i);

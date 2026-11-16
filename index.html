@@ -139,33 +139,35 @@ function noiseTile(){
   x.putImageData(id,0,0);_noise=c;return c;
 }
 
-/* ---------- curated palettes, tuned for relationship / dating-psychology content: [bgFrom, bgTo, accent, accent2, textColor] ---------- */
+/* ---------- vivid, scroll-stopping palettes for Facebook + Pinterest (relationship / dating-psychology content): [bgFrom, bgTo, accent, accent2, textColor] ---------- */
 const LIGHT=[
-['#fff1f4','#fbdee6','#d6566f','#ffb0c0','#2b0f16'],
-['#fdf2f4','#f3dde2','#b85c70','#e8a6b4','#2a1014'],
-['#fff7f0','#ffe3cf','#e8773a','#ffbf8f','#2d1608'],
-['#fff4f1','#ffdfd6','#ec6a52','#ffab93','#2b140d'],
-['#faf3f1','#eeddd9','#b8705f','#e3b3a6','#281411'],
-['#f8f4ff','#ebe0fb','#8a5cc9','#cda8f5','#271a3d'],
-['#fdf6fb','#f0dcee','#b3539e','#edaedb','#2a0f24'],
-['#fff9f2','#f6e6d6','#c99a6b','#e8c79a','#2a2008'],
-['#fff3f4','#f6dadf','#a63d52','#e3909f','#280d12'],
-['#fdfaf6','#f1e6dc','#c2703d','#e3a97c','#2b2118'],
-['#fff5f7','#fde2ea','#e0527a','#ffb3c9','#2d0f1b'],
-['#f4f7ff','#dfe6fb','#5b6fd6','#b4c0f5','#14183a'],
-['#fff8ec','#fce9c9','#d9822b','#fbc77f','#2e1c06'],
-['#f2fbf8','#d9f1ea','#2f9c82','#9fdcc8','#0e2a24']
+['#ffd1e3','#ff8fb8','#e5195f','#fff0f6','#3a0620'],
+['#ffe27a','#ffb347','#e8590c','#fff3bf','#3a1a00'],
+['#b9f0ff','#6ec8ff','#0b72d9','#e6f9ff','#04213f'],
+['#d7c2ff','#a78bfa','#6d28d9','#f1e8ff','#1f0a47'],
+['#c3f7d0','#5eead4','#0f9d7a','#e6fff4','#032b22'],
+['#ffd6c2','#ff9a8b','#e03a3e','#fff0ea','#3b0a0a'],
+['#fff1a8','#f9d423','#d9480f','#fffbe0','#3d2a00'],
+['#ffc8f0','#f78fe0','#b5179e','#ffe8fa','#33052d'],
+['#d4fba6','#8fe388','#1b9a3a','#efffe0','#0b2b10'],
+['#ffd9a8','#ff9f68','#c2410c','#fff0dc','#3b1500'],
+['#cfe8ff','#9ec5ff','#e11d74','#ffd6ea','#101a3d'],
+['#ffe0e9','#ffb3c7','#7c3aed','#f3e8ff','#2a0a3a'],
+['#fff0c2','#ffcf70','#d62828','#ffe9e0','#3a0f00'],
+['#c9fbff','#9be7d8','#f0568c','#ffe0ec','#06312c']
 ];
 const DARK=[
-['#2c0f17','#43151f','#f28a9b','#ffbac4','#ffffff'],
-['#1e1534','#2d2050','#b28bfa','#d9c4ff','#ffffff'],
-['#1f0f14','#331620','#e0607a','#ffa3b5','#ffffff'],
-['#201a18','#302722','#e3a16a','#f0c89a','#ffffff'],
-['#241a14','#3a241c','#e8a15c','#f2c28f','#ffffff'],
-['#201218','#331c26','#d98fa0','#f0bcc7','#ffffff'],
-['#14122b','#241f4d','#ff7eb6','#ffc1dc','#ffffff'],
-['#1a1020','#2d1840','#c77dff','#e6bdff','#ffffff'],
-['#0f1f26','#173a45','#ff8a80','#ffc1bb','#ffffff']
+['#4a0e8f','#d6246e','#ffd166','#ff9ecb','#ffffff'],
+['#0b3d91','#7b2ff7','#4cf2e0','#9fd0ff','#ffffff'],
+['#c9184a','#590d22','#ffb3c6','#ff758f','#ffffff'],
+['#e8432a','#b0125b','#ffe29a','#ffb199','#ffffff'],
+['#0f766e','#0b3b8f','#fcd34d','#5eead4','#ffffff'],
+['#2d1b69','#e0359a','#7df9ff','#ffb8e0','#ffffff'],
+['#6a11cb','#2575fc','#ffe45e','#b3a4ff','#ffffff'],
+['#c4005a','#e8431f','#fff1a8','#ffb4a2','#ffffff'],
+['#1b1464','#8e2de2','#ff8ad8','#c9a7ff','#ffffff'],
+['#0a2540','#008f95','#ffd23f','#7fe6e6','#ffffff'],
+['#7a0bc0','#e63a9f','#ffe66d','#ffc4ea','#ffffff']
 ];
 
 /* ---------- unique recipe per background number ----------
@@ -261,11 +263,16 @@ function drawBg(idx){
   /* multi-stop gradient with a gentle hue drift through the middle */
   const ang=Math.PI/2+(r()-.5)*1.3,l=Math.hypot(W,H)/2,gx=Math.cos(ang)*l,gy=Math.sin(ang)*l;
   const g=ctx.createLinearGradient(W/2-gx,H/2-gy,W/2+gx,H/2+gy);
-  let mid=mix(rgbA,rgbB,.52);mid=mix(mid,rgbAcc,.1+r()*.08);
+  let mid=mix(rgbA,rgbB,.52);mid=mix(mid,rgbAcc,.2+r()*.12);
   g.addColorStop(0,rgba(rgbA,1));g.addColorStop(.5,rgba(mid,1));g.addColorStop(1,rgba(rgbB,1));
   ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
 
   const fl=r()<.5,top=r()<.5,type=ACC[rc.acc];
+  /* aurora: big soft colour blobs give a vivid mesh-gradient look instead of a flat wash */
+  const mixAcc=mix(rgbAcc,rgbAcc2,.5),ka=dk?1:.8;
+  glow(W*(fl?.12:.88),H*(top?.1:.9),(520+r()*220)*sc,rgba(rgbAcc2,.6*ka));
+  glow(W*(fl?.92:.08),H*(top?.72:.28),(480+r()*220)*sc,rgba(rgbAcc,.5*ka));
+  glow(W*(.3+r()*.4),H*(top?.98:.02),(420+r()*180)*sc,rgba(mixAcc,.55*ka));
   switch(type){
     case 0:{const R1=(260+r()*140)*sc,R2=(220+r()*120)*sc;
       glow(fl?W*.08:W*.92,top?H*.1:H*.9,R1,rgba(rgbAcc,.5));
@@ -308,12 +315,12 @@ function drawBg(idx){
 
   /* relationship / dating-psychology motifs: layout 0 = faint big watermark + scattered, 1 = corner clusters, 2 = top/bottom rows, 3 = side columns */
   const A=rc.prim,B=rc.sec,cols=[rgbAcc,rgbAcc2,mix(rgbAcc,rgbB,.45),mix(rgbAcc,hex2rgb(ink),.25)];
-  const cc=()=>rgba(cols[r()*cols.length|0],1),al=()=>dk?.42+r()*.28:.38+r()*.28,md=()=>r()<.45?'s':'f';
+  const cc=()=>rgba(cols[r()*cols.length|0],1),al=()=>dk?.5+r()*.3:.5+r()*.3,md=()=>r()<.45?'s':'f';
   const ex=(x,y)=>{const a=(x-W/2)/(W*.42),b=(y-H/2)/(H*.3);return a*a+b*b<1},placed=[];
   const spot=(s,fn)=>{for(let t=0;t<40;t++){const q=fn();if(!ex(q[0],q[1])&&placed.every(o=>Math.hypot(o.x-q[0],o.y-q[1])>(o.s+s)*.55)){placed.push({x:q[0],y:q[1],s:s});return q}}return null};
   const put=(k,x,y,s)=>motif(k,x,y,s,(r()-.5)*1.1,cc(),al(),md());
   if(rc.lay===0){
-    motif(A,W/2,H*(.44+r()*.06),Math.min(W,H)*(.8+r()*.2),(r()-.5)*.6,rgba(rgbAcc,1),dk?.07+r()*.04:.06+r()*.05,md());
+    motif(A,W/2,H*(.44+r()*.06),Math.min(W,H)*(.8+r()*.2),(r()-.5)*.6,rgba(rgbAcc,1),dk?.13+r()*.05:.14+r()*.06,md());
     const n=10+(r()*7|0);
     for(let i=0;i<n;i++){const s=(70+r()*110)*sc,q=spot(s,()=>[r()*W,r()*H]);if(q)put(r()<.3?A:B,q[0],q[1],s)}
   }else if(rc.lay===1){
@@ -340,7 +347,7 @@ function drawBg(idx){
 
   /* soft vignette for depth */
   const vig=ctx.createRadialGradient(W/2,H*.46,Math.min(W,H)*.15,W/2,H*.5,Math.max(W,H)*.75);
-  vig.addColorStop(0,'rgba(0,0,0,0)');vig.addColorStop(1,dk?'rgba(0,0,0,.34)':'rgba(0,0,0,.14)');
+  vig.addColorStop(0,'rgba(0,0,0,0)');vig.addColorStop(1,dk?'rgba(0,0,0,.2)':'rgba(0,0,0,.07)');
   ctx.fillStyle=vig;ctx.fillRect(0,0,W,H);
 
   ctx.restore();
@@ -398,7 +405,7 @@ function paint(idx,text){
   if(text){
     ctx.save();
     const spot=ctx.createRadialGradient(W/2,H/2,10*sc,W/2,H/2,Math.min(W,H)*.52);
-    spot.addColorStop(0,bg.dark?'rgba(0,0,0,.4)':'rgba(255,255,255,.6)');
+    spot.addColorStop(0,bg.dark?'rgba(0,0,0,.26)':'rgba(255,255,255,.3)');
     spot.addColorStop(1,'rgba(0,0,0,0)');
     ctx.fillStyle=spot;ctx.fillRect(0,0,W,H);
     ctx.restore();

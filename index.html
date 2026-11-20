@@ -3,12 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Title Image Maker</title>
+<title>RelCues Pin Maker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&family=Montserrat:wght@800&family=Playfair+Display:wght@800&family=Oswald:wght@700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f3f4f7;--card:#fff;--ink:#1b1e27;--mut:#667085;--line:#d9dde5;--acc:#2f5bea}
-@media (prefers-color-scheme:dark){:root{--bg:#14161c;--card:#1d2029;--ink:#eef0f5;--mut:#9aa3b5;--line:#313644;--acc:#6d8cff}}
+:root{--bg:#ffffff;--card:#ffffff;--ink:#111111;--mut:#5b6270;--line:#e5e7eb;--acc:#e0202e}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;background:var(--bg);background-image:var(--bgimg,none);background-attachment:fixed;color:var(--ink);transition:color .5s;font-family:"Segoe UI",system-ui,Arial,sans-serif;padding:14px}
 .wrap{max-width:760px;margin:0 auto;display:grid;gap:12px}
@@ -36,8 +35,8 @@ button:focus-visible,textarea:focus-visible,select:focus-visible,input:focus-vis
 <body>
 <div class="wrap">
   <div class="card">
-    <h1>Title Image Maker</h1>
-    <p class="sub">Paste your blog post title, download the image, and post it on Facebook or Pinterest.</p>
+    <h1>RelCues Pin Maker</h1>
+    <p class="sub">White background, black text, red highlight. Paste your title, download, post on Pinterest.</p>
   </div>
 
   <div class="card">
@@ -72,38 +71,37 @@ button:focus-visible,textarea:focus-visible,select:focus-visible,input:focus-vis
       <div><label for="blogfmt">Blog image format</label>
         <select id="blogfmt"><option value="jpg">JPG</option><option value="webp">WebP (smaller)</option><option value="png">PNG</option></select></div>
     </div>
-    <div style="margin-top:10px"><label for="mstyle">Tapped word style</label>
-      <select id="mstyle"><option value="text">Text colour</option><option value="marker">Marker highlight</option></select></div>
+    <div style="margin-top:10px"><label for="mstyle">Red highlight style</label>
+      <select id="mstyle"><option value="auto">Auto (changes after every save)</option><option value="text">Red text</option><option value="marker">Red marker + white text</option><option value="under">Red underline</option></select></div>
     <label class="chk"><input type="checkbox" id="fill" checked> Fill each line (lines with fewer words get bigger text)</label>
     <label class="chk"><input type="checkbox" id="auto" checked> Auto-fit text size</label>
-    <label class="chk"><input type="checkbox" id="adv" checked> Change design + background after every save</label>
+    <label class="chk"><input type="checkbox" id="adv" checked> Change highlight style after every save</label>
   </div>
 
   <div class="card">
     <div class="info"><span id="counter"></span><span id="bgid"></span></div>
     <div class="canvas-box"><canvas id="cv" width="1600" height="2000" style="cursor:pointer"></canvas></div>
-    <p class="sub" style="margin-top:8px;text-align:center">Tap a word on the image to colour it. Tap again for the next colour (5 colours, then back to normal).</p>
+    <p class="sub" style="margin-top:8px;text-align:center">Key words turn red automatically. Tap any word to switch its red highlight on or off.</p>
     <div class="btns" style="margin-top:10px">
-      <button id="prev">Previous background</button>
-      <button id="next">Next background</button>
+      <button id="prev">Previous style</button>
+      <button id="next">Next style</button>
       <button id="dlp" class="p">Download PNG</button>
       <button id="dlj" class="p">Download JPG</button>
     </div>
     <p class="sub" id="note" style="margin-top:8px"></p>
     <div class="btns" style="margin-top:8px">
-      <button id="clr">Clear word colours</button>
-      <button id="reset">Reset shuffle</button>
+      <button id="clr">Reset auto highlight</button>
     </div>
   </div>
 </div>
 
 <script>
 (function(){
-let W=1600,H=2000;const N=1200,KEY='titleimg_shuffle_v1',RK='titleimg_ratio_v1';
+let W=1600,H=2000;const N=1200,KEY='titleimg_shuffle_v1',RK='relcues_ratio_v1';
 const cv=document.getElementById('cv');let ctx=cv.getContext('2d');
 const $=id=>document.getElementById(id);
 function setRatio(v){H=v==='2:3'?2400:2000;cv.height=H}
-let rv='4:5';try{rv=localStorage.getItem(RK)||'4:5'}catch(e){}
+let rv='4:5';try{rv=localStorage.getItem(RK)||'2:3'}catch(e){}
 if(rv!=='2:3')rv='4:5';$('ratio').value=rv;setRatio(rv);
 
 /* ---------- shuffle state (saved in browser) ---------- */
@@ -236,78 +234,35 @@ function motif(k,x,y,s,rot,col,al,mode){
   ctx.restore();
 }
 
-/* ---------- background: one solid colour + a few flat shapes (no gradient, glow, grain or vignette) ---------- */
+/* ---------- RelCues brand background: white + red top bar + RelCues strip ---------- */
+const RED='#e0202e',INK='#111111';
 function drawBg(idx){
   const sc=Math.min(W,H)/1600;
-  const r=mb(idx*7919+12345),rc=recipe(idx),p=ALL[rc.pal],dk=rc.pal>=LIGHT.length;
-  const rgbA=hex2rgb(p[0]),rgbB=hex2rgb(p[1]),rgbAcc=hex2rgb(p[2]),rgbAcc2=hex2rgb(p[3]),ink=p[4];
-
   ctx.save();
-  ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;try{ctx.filter='none'}catch(e){}
-
-  /* flat solid background */
-  ctx.fillStyle=rgba(rgbA,1);ctx.fillRect(0,0,W,H);
-
-  const fl=r()<.5,top=r()<.5,type=ACC[rc.acc];
-  switch(type){
-    case 4:{const gap=46*sc,R=3*sc,x0=fl?W*.07:W*.72,y0=top?H*.07:H*.8;
-      ctx.fillStyle=rgba(rgbAcc,.5);
-      for(let i=0;i<6;i++)for(let j=0;j<6;j++){ctx.beginPath();ctx.arc(x0+i*gap,y0+j*gap,R,0,6.283);ctx.fill()}break}
-    case 5:{const m=(70+r()*20)*sc;ctx.strokeStyle=rgba(rgbAcc,.7);ctx.lineWidth=3*sc;rr(m,m,W-2*m,H-2*m,24*sc);ctx.stroke();break}
-    case 6:{const s=(300+r()*80)*sc,X=fl?0:W,Y=top?0:H,sx=fl?s:-s,sy=top?s:-s;
-      ctx.beginPath();ctx.moveTo(X,Y);ctx.lineTo(X+sx,Y);ctx.lineTo(X,Y+sy);ctx.closePath();
-      ctx.fillStyle=rgba(rgbAcc2,1);ctx.fill();break}
-    case 7:{const amp=(40+r()*20)*sc,off=(120+r()*40)*sc;ctx.beginPath();
-      if(top){ctx.moveTo(0,off);ctx.bezierCurveTo(W*.25,off-amp,W*.75,off+amp,W,off);ctx.lineTo(W,0);ctx.lineTo(0,0)}
-      else{const base=H-off;ctx.moveTo(0,base);ctx.bezierCurveTo(W*.25,base-amp,W*.75,base+amp,W,base);ctx.lineTo(W,H);ctx.lineTo(0,H)}
-      ctx.closePath();ctx.fillStyle=rgba(rgbAcc2,1);ctx.fill();break}
-    case 8:{const ccx=fl?W*.1:W*.9,ccy=top?H*.15:H*.85;ctx.strokeStyle=rgba(rgbAcc,.55);ctx.lineWidth=2.5*sc;
-      [1,1.6,2.2].forEach(m=>{ctx.beginPath();ctx.arc(ccx,ccy,70*sc*m,0,6.283);ctx.stroke()});break}
-    case 9:{const m=90*sc,len=110*sc;ctx.strokeStyle=rgba(rgbAcc,.7);ctx.lineWidth=3.5*sc;ctx.lineCap='round';
-      ctx.beginPath();ctx.moveTo(m,m+len);ctx.lineTo(m,m);ctx.lineTo(m+len,m);
-      ctx.moveTo(W-m,H-m-len);ctx.lineTo(W-m,H-m);ctx.lineTo(W-m-len,H-m);ctx.stroke();
-      ctx.fillStyle=rgba(rgbAcc,1);ctx.beginPath();ctx.arc(m,m,5*sc,0,6.283);ctx.fill();ctx.beginPath();ctx.arc(W-m,H-m,5*sc,0,6.283);ctx.fill();break}
-    case 13:{const m=90*sc;ctx.strokeStyle=rgba(rgbAcc,.6);ctx.lineWidth=2*sc;
-      ctx.beginPath();ctx.moveTo(m,m);ctx.lineTo(W-m,m);ctx.moveTo(m,H-m);ctx.lineTo(W-m,H-m);ctx.stroke();
-      ctx.fillStyle=rgba(rgbAcc,1);ctx.beginPath();ctx.arc(m,m,4*sc,0,6.283);ctx.fill();ctx.beginPath();ctx.arc(W-m,H-m,4*sc,0,6.283);ctx.fill();break}
-  }
-
-  /* a few flat icons only (lots of empty space = minimalist); layout 0 = one big faint icon + a few small, 1 = corners, 2 = top/bottom rows, 3 = side columns */
-  const A=rc.prim,B=rc.sec;
-  const ex=(x,y)=>{const a=(x-W/2)/(W*.42),b=(y-H/2)/(H*.3);return a*a+b*b<1},placed=[];
-  const spot=(s,fn)=>{for(let t=0;t<40;t++){const q=fn();if(!ex(q[0],q[1])&&placed.every(o=>Math.hypot(o.x-q[0],o.y-q[1])>(o.s+s)*.55)){placed.push({x:q[0],y:q[1],s:s});return q}}return null};
-  const put=(k,x,y,s)=>{const soft=r()<.5;motif(k,x,y,s,(r()-.5)*.6,rgba(soft?rgbAcc2:rgbAcc,1),soft?1:.6,'f')};
-  if(rc.lay===0){
-    motif(A,W/2,H*(.44+r()*.06),Math.min(W,H)*(.8+r()*.2),(r()-.5)*.4,rgba(rgbAcc,1),dk?.1:.12,'f');
-    const n=3+(r()*3|0);
-    for(let i=0;i<n;i++){const s=(80+r()*90)*sc,q=spot(s,()=>[r()*W,r()*H]);if(q)put(r()<.3?A:B,q[0],q[1],s)}
-  }else if(rc.lay===1){
-    [[fl?0:W,top?0:H],[fl?W:0,top?H:0]].forEach((c,ci)=>{
-      const sx=c[0]?-1:1,sy=c[1]?-1:1;
-      put(ci?B:A,c[0]+sx*W*.05,c[1]+sy*H*.035,(220+r()*100)*sc);
-      const n=1+(r()*2|0);
-      for(let i=0;i<n;i++)put(r()<.5?A:B,c[0]+sx*r()*W*.26,c[1]+sy*r()*H*.17,(80+r()*80)*sc)});
-  }else if(rc.lay===2){
-    [true,false].forEach(tp=>{const n=3+(r()*2|0);
-      for(let i=0;i<n;i++)put((i+(tp?0:1))%2?A:B,(i+.5)/n*W+(r()-.5)*W/n*.3,H*(tp?.065:.935)+(r()-.5)*H*.02,(70+r()*50)*sc)});
-  }else{
-    [true,false].forEach(lf=>{const n=3;
-      for(let i=0;i<n;i++)put((i+(lf?0:1))%2?A:B,W*(lf?.055:.945)+(r()-.5)*W*.02,(i+.5)/n*H+(r()-.5)*H/n*.3,(80+r()*60)*sc)});
-  }
-
+  ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.shadowColor='transparent';ctx.shadowBlur=0;
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=RED;ctx.fillRect(0,0,W,22*sc);
+  const bs=64*sc,hs=bs*.8,gap=bs*.3,by=H-135*sc;
+  ctx.font=`700 ${bs}px ${family()}`;ctx.textAlign='left';ctx.textBaseline='middle';
+  const w1=ctx.measureText('Rel').width,w2=ctx.measureText('Cues').width,x=W/2-(hs+gap+w1+w2)/2;
+  heartPath(x+hs/2,by-hs/2,hs);ctx.fillStyle=RED;ctx.fill();
+  ctx.fillStyle=INK;ctx.fillText('Rel',x+hs+gap,by);
+  ctx.fillStyle=RED;ctx.fillText('Cues',x+hs+gap+w1,by);
   ctx.restore();
-  /* colour used for tapped words: darkened on light backgrounds so it stays readable */
-  const accTxt=dk?mix(rgbAcc,[255,255,255],.12):mix(rgbAcc,hex2rgb(ink),.22);
-  /* 5 colours a tapped word cycles through (readable on this background's light/dark tone) */
-  const pal=[rgba(accTxt,1)].concat(dk?['#ffd166','#7fd6ff','#8be9a8','#ff9bd2']:['#d4380d','#1d6fb8','#0f8a5f','#7b3fc4']);
-  return {color:ink,dark:dk,accent:rgba(rgbAcc,1),accentText:rgba(accTxt,1),pal:pal};
+  return {color:INK,dark:false,accent:RED,accentText:RED,pal:[]};
 }
 
 /* ---------- text ---------- */
 const FALL={'Poppins':'"Poppins"','Montserrat':'"Montserrat"','Playfair Display':'"Playfair Display"','Oswald':'"Oswald"'};
 function family(){return (FALL[$('font').value]||'"Poppins"')+',"Segoe UI",Arial,sans-serif'}
 /* words the user tapped on the image: word number -> colour number (1..5) */
-const picked=new Map(),PALN=5;let hits=[];
+const picked=new Map();let hits=[],curAuto=new Set();
+const KW=new Set('love toxic ex trust signs sign never secret secrets crush breakup cheating cheat jealous jealousy attract attracted attraction truth red flag flags ghosting miss loyal boyfriend girlfriend husband wife partner heart hurt lonely why'.split(' '));
+function autoWords(text){const ws=[];let n=0;
+  text.split(/\n/).forEach(p=>p.trim().split(/\s+/).filter(Boolean).forEach(t=>ws.push({i:n++,k:t.toLowerCase().replace(/[^a-z']/g,'')})));
+  const hit=ws.filter(w=>KW.has(w.k)).slice(0,2).map(w=>w.i);
+  return new Set(hit.length?hit:ws.slice(-2).map(w=>w.i))}
+function curMode(){const v=$('mstyle').value;return v==='auto'?['text','marker','under'][S.pos%3]:v}
 function lum(c){const v=c[0]==='#'?hex2rgb(c):c.match(/\d+/g).map(Number);return(.299*v[0]+.587*v[1]+.114*v[2])/255}
 /* splits the title into balanced lines (no lonely last word); each word keeps its number so taps can be matched */
 function wrapWords(text,maxW){const out=[];let n=0;const sp=ctx.measureText(' ').width;
@@ -347,7 +302,7 @@ function paint(idx,text){
   const total=lay.total,top0=(H-total)/2;
 
   ctx.textBaseline='middle';ctx.textAlign=al;
-  const main=ctx.canvas===cv,marker=$('mstyle').value==='marker';if(main)hits=[];
+  const main=ctx.canvas===cv,mode=curMode(),AUTO=autoWords(text);if(main){hits=[];curAuto=AUTO}
   let ly=top0,lastC=top0,lastS=size;
   ctx.save();
   ctx.textAlign='left';
@@ -358,11 +313,10 @@ function paint(idx,text){
       lw=wd.reduce((a,b)=>a+b,0)+spW*(R.ws.length-1);
     let x=al==='center'?W/2-lw/2:x0;const yc=ly+R.lh/2-R.s*.1;
     R.ws.forEach((o,k)=>{
-      const c=picked.get(o.i);let col=fg;
-      if(c){col=bg.pal[c-1];
-        if(marker){ctx.save();ctx.shadowColor='transparent';ctx.fillStyle=col;
-          const px=R.s*.14,bh=R.s*1.1;rr(x-px,yc-bh/2+R.s*.04,wd[k]+2*px,bh,R.s*.18);ctx.fill();ctx.restore();
-          col=lum(col)>.6?'#1b1b1f':'#ffffff'}}
+      const hl=picked.has(o.i)?picked.get(o.i)===1:AUTO.has(o.i);let col=fg;
+      if(hl){
+        if(mode==='marker'){ctx.save();ctx.fillStyle=RED;const px=R.s*.14,bh=R.s*1.1;rr(x-px,yc-bh/2+R.s*.04,wd[k]+2*px,bh,R.s*.18);ctx.fill();ctx.restore();col='#ffffff'}
+        else{col=RED;if(mode==='under'){ctx.save();ctx.fillStyle=RED;ctx.fillRect(x,yc+R.s*.42,wd[k],Math.max(4,R.s*.07));ctx.restore()}}}
       ctx.fillStyle=col;ctx.fillText(o.t,x,yc);
       if(main)hits.push({i:o.i,x:x-spW/2,y:ly,w:wd[k]+spW,h:R.lh});
       x+=wd[k]+spW});
@@ -383,20 +337,7 @@ function paint(idx,text){
 
 /* ---------- page design follows the current background (changes after every save) ---------- */
 const css=c=>`rgb(${c[0]},${c[1]},${c[2]})`;
-function applyTheme(idx){
-  const rc=recipe(idx),p=ALL[rc.pal],dk=rc.pal>=LIGHT.length,r=document.documentElement.style;
-  const b0=hex2rgb(p[0]),b1=hex2rgb(p[1]),acc=hex2rgb(p[2]),ink=dk?[255,255,255]:hex2rgb(p[4]);
-  const card=dk?mix(b1,[255,255,255],.07):mix([255,255,255],b0,.3),base=dk?b0:b1;
-  r.setProperty('--bg',css(b0));
-  r.setProperty('--bgimg','none');
-  r.setProperty('--card',css(card));
-  r.setProperty('--ink',css(ink));
-  r.setProperty('--mut',css(mix(ink,base,.4)));
-  r.setProperty('--line',css(mix(base,ink,.22)));
-  r.setProperty('--acc',css(acc));
-  r.setProperty('--onacc',(.299*acc[0]+.587*acc[1]+.114*acc[2])/255>.6?'#1b1b1f':'#ffffff');
-  document.documentElement.style.colorScheme=dk?'dark':'light';
-}
+function applyTheme(idx){document.documentElement.style.colorScheme='light'}
 
 let token=0;
 async function render(){
@@ -407,7 +348,7 @@ async function render(){
   const size=paint(idx,text);
   $('dlp').disabled=$('dlj').disabled=!text;
   $('sizeV').textContent=$('auto').checked?'Auto ('+size+')':$('size').value;
-  $('counter').textContent=`${S.pos+1} / ${N} · Round ${S.round}`;$('bgid').textContent='BG #'+(idx+1);
+  $('counter').textContent='Highlight: '+({text:'Red text',marker:'Red marker',under:'Red underline'})[curMode()];$('bgid').textContent='';
 }
 
 /* ---------- download (social image + optional blog-size image) ---------- */
@@ -448,7 +389,7 @@ $('title').addEventListener('input',()=>picked.clear());
 cv.addEventListener('click',e=>{
   const r=cv.getBoundingClientRect(),px=(e.clientX-r.left)*cv.width/r.width,py=(e.clientY-r.top)*cv.height/r.height;
   const h=hits.find(b=>px>=b.x&&px<=b.x+b.w&&py>=b.y&&py<=b.y+b.h);
-  if(!h)return;const c=(picked.get(h.i)||0)+1;c>PALN?picked.delete(h.i):picked.set(h.i,c);render()});
+  if(!h)return;const now=picked.has(h.i)?picked.get(h.i)===1:curAuto.has(h.i);picked.set(h.i,now?2:1);render()});
 $('clr').onclick=()=>{picked.clear();render()};
 $('size').addEventListener('input',()=>{$('auto').checked=false;deb()});
 $('blogsize').addEventListener('change',note);
@@ -457,11 +398,10 @@ $('next').onclick=()=>{next();render()};
 $('prev').onclick=()=>{prev();render()};
 $('dlp').onclick=()=>download('image/png');
 $('dlj').onclick=()=>download('image/jpeg');
-$('reset').onclick=()=>{if(confirm('Reset the shuffle? All 1200 backgrounds will be shuffled again from the start.')){S={order:shuffle(),pos:0,round:1};save();render()}};
 if(NATIVE){$('dlp').textContent='Share / Save PNG';$('dlj').textContent='Share / Save JPG'}
 
 /* ---------- remember settings (font, style, size, blog image, site name...) ---------- */
-const SETK='titleimg_settings_v2',SETIDS=['font','case','align','size','auto','fill','site','blogsize','blogfmt','adv','mstyle'];
+const SETK='relcues_settings_v1',SETIDS=['font','case','align','size','auto','fill','site','blogsize','blogfmt','adv','mstyle'];
 function saveSet(){try{const o={};SETIDS.forEach(i=>{const e=$(i);o[i]=e.type==='checkbox'?e.checked:e.value});localStorage.setItem(SETK,JSON.stringify(o))}catch(e){}}
 function loadSet(){try{const o=JSON.parse(localStorage.getItem(SETK));if(!o)return;
   SETIDS.forEach(i=>{if(!(i in o))return;const e=$(i);
